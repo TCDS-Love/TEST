@@ -1,5 +1,4 @@
-﻿
-#nullable enable
+﻿#nullable enable
 
 
 using ClickLib.Clicks;
@@ -20,6 +19,7 @@ namespace AutoRetainer.Modules.Multi;
 internal unsafe class AutoLogin
 {
     static AutoLogin? instance = null;
+
     internal static AutoLogin Instance
     {
         get
@@ -50,6 +50,9 @@ internal unsafe class AutoLogin
         PluginLog.Information("Autologin module initialized");
     }
 
+    /// <summary>
+    /// 退出登录
+    /// </summary>
     internal void Logoff()
     {
         actionQueue.Clear();
@@ -57,11 +60,18 @@ internal unsafe class AutoLogin
         actionQueue.Enqueue(SelectYesLogout);
     }
 
+    /// <summary>
+    /// 登录
+    /// </summary>
+    /// <param name="WorldName"></param>
+    /// <param name="characterName"></param>
+    /// <param name="serviceAccount"></param>
     internal void Login(string WorldName, string characterName, int serviceAccount)
     {
+        var world = Svc.Data.Excel.GetSheet<World>()?.FirstOrDefault(w =>
+            w.Name.ToDalamudString().TextValue.Equals(WorldName, StringComparison.InvariantCultureIgnoreCase));
 
-        var world = Svc.Data.Excel.GetSheet<World>()?.FirstOrDefault(w => w.Name.ToDalamudString().TextValue.Equals(WorldName, StringComparison.InvariantCultureIgnoreCase));
-
+        PluginLog.Error($"正在尝试登录 {characterName}@{WorldName}, serviceAccount is {serviceAccount}");
         if (world == null)
         {
             PluginLog.Error($"'{WorldName}' is not a valid world name.");
@@ -85,21 +95,35 @@ internal unsafe class AutoLogin
         tempCharacter = characterName;
         tempServiceAccount = serviceAccount;
         actionQueue.Clear();
-        actionQueue.Enqueue(OpenDataCenterMenu);
-        actionQueue.Enqueue(SelectDataCentre);
-        actionQueue.Enqueue(SelectServiceAccount);
-        actionQueue.Enqueue(SelectWorld);
-        actionQueue.Enqueue(VariableDelay(10));
-        actionQueue.Enqueue(SelectCharacter);
+
+        // 打开 大区
+        actionQueue.Enqueue(OpenDataCenterMenu); // 打开 数据中心
+        // 不选择数据中心 actionQueue.Enqueue(SelectDataCentre); // 选择 数据中心
+
+        // 等待小区出现
+        actionQueue.Enqueue(SelectServiceAccount); // 找到服务区
+
+        // 选择世界
+        actionQueue.Enqueue(SelectWorld); // 选择 服务区(红茶川)
+        // actionQueue.Enqueue(VariableDelay(10));
+        
+        // 选择角色
+        actionQueue.Enqueue(SelectCharacter); // 选择 游戏角色(Nesb01t)
         actionQueue.Enqueue(SelectYes);
         actionQueue.Enqueue(Delay5s);
         actionQueue.Enqueue(ClearTemp);
     }
 
+    /// <summary>
+    /// 切换角色
+    /// </summary>
+    /// <param name="WorldName">大区</param>
+    /// <param name="characterName">账号名</param>
+    /// <param name="serviceAccount">小区</param>
     internal void SwapCharacter(string WorldName, string characterName, int serviceAccount)
     {
-
-        var world = Svc.Data.Excel.GetSheet<World>()?.FirstOrDefault(w => w.Name.ToDalamudString().TextValue.Equals(WorldName, StringComparison.InvariantCultureIgnoreCase));
+        var world = Svc.Data.Excel.GetSheet<World>()?.FirstOrDefault(w =>
+            w.Name.ToDalamudString().TextValue.Equals(WorldName, StringComparison.InvariantCultureIgnoreCase));
 
         if (world == null)
         {
@@ -125,14 +149,24 @@ internal unsafe class AutoLogin
         tempServiceAccount = serviceAccount;
         actionQueue.Clear();
         actionQueue.Enqueue(VariableDelay(5));
+
+        // 退出账号
         actionQueue.Enqueue(Logout);
         actionQueue.Enqueue(SelectYesLogout);
         actionQueue.Enqueue(VariableDelay(5));
-        actionQueue.Enqueue(OpenDataCenterMenu);
-        actionQueue.Enqueue(SelectDataCentre);
+
+        // 打开 大区
+        actionQueue.Enqueue(OpenDataCenterMenu); // 打开 数据中心
+        // actionQueue.Enqueue(SelectDataCentre); // 同上...
+
+        // 选择 小区
         actionQueue.Enqueue(SelectServiceAccount);
+
+        // 选择世界
         actionQueue.Enqueue(SelectWorld);
         actionQueue.Enqueue(VariableDelay(10));
+
+        // 选择角色
         actionQueue.Enqueue(SelectCharacter);
         actionQueue.Enqueue(SelectYes);
         actionQueue.Enqueue(Delay5s);
@@ -146,6 +180,7 @@ internal unsafe class AutoLogin
     {
         return () =>
         {
+            PluginLog.Log($"Deley{frameDelay}");
             Delay = frameDelay;
             return true;
         };
@@ -163,6 +198,7 @@ internal unsafe class AutoLogin
             if (sw.IsRunning) sw.Stop();
             return;
         }
+
         if (!sw.IsRunning) sw.Restart();
 
         /*if (Svc.KeyState[VirtualKey.SHIFT])
@@ -176,7 +212,6 @@ internal unsafe class AutoLogin
             Delay -= 1;
             return;
         }
-
 
 
         if (sw.ElapsedMilliseconds > 60000)
@@ -206,44 +241,29 @@ internal unsafe class AutoLogin
     private readonly Queue<Func<bool>> actionQueue = new();
     internal bool IsRunning => actionQueue.Count != 0;
 
+    /// <summary>
+    /// 打开大区
+    /// </summary>
+    /// <returns></returns>
     bool OpenDataCenterMenu()
     {
-        var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("_TitleMenu", 1);
+        var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("_TitleMenu", 1); // 获取主页面
         if (addon == null || addon->IsVisible == false) return false;
-        Callback.Fire(addon,false, 12);
-        var nextAddon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
+        
+        // 选大区改成等下一个页面
+        // Callback.Fire(addon,false, 12);
+        // var nextAddon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
+        Callback.Fire(addon, false, 1);
+        var nextAddon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("NowLoading", 1);
+        
         if (nextAddon == null) return false;
         return true;
     }
 
-    bool SelectServiceAccount()
-    {
-        var dcMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
-        if (dcMenu != null) UiHelper.Close(dcMenu, true);
-        if (TryGetAddonByName<AtkUnitBase>("_CharaSelectWorldServer", out _))
-        {
-            return true;
-        }
-        if (TryGetAddonByName<AddonSelectString>("SelectString", out var addon) && IsAddonReady(&addon->AtkUnitBase)
-            && addon->AtkUnitBase.UldManager.NodeListCount >= 4)
-        {
-            var text = MemoryHelper.ReadSeString(&addon->AtkUnitBase.UldManager.NodeList[3]->GetAsAtkTextNode()->NodeText).ExtractText();
-            var compareTo = Svc.Data.GetExcelSheet<Lobby>()?.GetRow(11)?.Text.ToString();
-            if (text == compareTo)
-            {
-                PluginLog.Information($"Selecting service account");
-                ClickSelectString.Using((nint)addon).SelectItem((ushort)tempServiceAccount);
-                return true;
-            }
-            else
-            {
-                PluginLog.Information($"Found different SelectString: {text}");
-                return false;
-            }
-        }
-        return false;
-    }
-
+    /// <summary>
+    /// 选择大区
+    /// </summary>
+    /// <returns></returns>
     bool SelectDataCentre()
     {
         var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
@@ -252,19 +272,61 @@ internal unsafe class AutoLogin
         return true;
     }
 
+    /// <summary>
+    /// 选择服务账号
+    /// </summary>
+    /// <returns></returns>
+    bool SelectServiceAccount()
+    {
+        // 选大区
+        // var dcMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1); // 选大区
+        // if (dcMenu != null) UiHelper.Close(dcMenu, true);
+        
+        // 选小区
+        if (TryGetAddonByName<AtkUnitBase>("_CharaSelectWorldServer", out _))
+        {
+            return true;
+        }
+
+        if (TryGetAddonByName<AddonSelectString>("SelectString", out var addon) && IsAddonReady(&addon->AtkUnitBase)
+            && addon->AtkUnitBase.UldManager.NodeListCount >= 4)
+        {
+            var text = MemoryHelper
+                .ReadSeString(&addon->AtkUnitBase.UldManager.NodeList[3]->GetAsAtkTextNode()->NodeText).ExtractText();
+            var compareTo = Svc.Data.GetExcelSheet<Lobby>()?.GetRow(11)?.Text.ToString();
+            if (text == compareTo)
+            {
+                PluginLog.Error($"成功选择! Selecting service account");
+                ClickSelectString.Using((nint)addon).SelectItem((ushort)tempServiceAccount);
+                return true;
+            }
+            else
+            {
+                PluginLog.Error($"Found different SelectString: {text}");
+                return false;
+            }
+        }
+
+        return false;
+    }
+    
+    /// <summary>
+    /// 选择服务器
+    /// </summary>
+    /// <returns></returns>
     bool SelectWorld()
     {
-        // Select World
-        var dcMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
-        if (dcMenu != null) UiHelper.Close(dcMenu, true);
+        // var dcMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("TitleDCWorldMap", 1);
+        // if (dcMenu != null) UiHelper.Close(dcMenu, true);
         var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("_CharaSelectWorldServer", 1);
         if (addon == null) return false;
 
-        var stringArray = CSFramework.Instance()->UIModule->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder.StringArrays[1];
+        var stringArray = CSFramework.Instance()->UIModule->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder
+            .StringArrays[1];
         if (stringArray == null || tempWorld == null) return false;
 
         var world = Svc.Data.Excel.GetSheet<World>()?.GetRow(tempWorld.Value);
-        if (world is not { IsPublic: true }) return false;
+        // if (world is not { IsPublic: true }) return false;
 
         var checkedWorldCount = 0;
 
@@ -280,10 +342,15 @@ internal unsafe class AutoLogin
             return true;
         }
 
+        PluginLog.Error("NIHAO");
         if (checkedWorldCount > 0) actionQueue.Clear();
         return false;
     }
 
+    /// <summary>
+    /// 选择角色
+    /// </summary>
+    /// <returns></returns>
     bool SelectCharacter()
     {
         // Select Character
@@ -291,16 +358,19 @@ internal unsafe class AutoLogin
         if (addon == null || tempCharacter == null) return false;
         if (Utils.TryGetCharacterIndex(tempCharacter, out var index))
         {
+            PluginLog.Error(index.ToString());
             Callback.Fire(addon, false, (int)17, (int)0, (int)index);
             var nextAddon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("SelectYesno", 1);
             return nextAddon != null;
         }
+
         return false;
     }
 
     bool SelectYesLogout()
     {
-        var addon = Utils.GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>()?.GetRow(115)?.Text.ToDalamudString().ExtractText());
+        var addon = Utils.GetSpecificYesno(Svc.Data.GetExcelSheet<Addon>()?.GetRow(115)?.Text.ToDalamudString()
+            .ExtractText());
         if (addon == null || !IsAddonReady(addon)) return false;
         ClickSelectYesNo.Using((nint)addon).Yes();
         return true;
@@ -388,7 +458,6 @@ internal unsafe class AutoLogin
             actionQueue.Enqueue(SelectYes);
             actionQueue.Enqueue(Delay5s);
         }
-
 
 
         if (ImGui.Button("Swap Character"))

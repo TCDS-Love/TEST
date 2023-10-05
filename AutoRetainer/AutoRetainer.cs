@@ -217,12 +217,21 @@ public unsafe class AutoRetainer : IDalamudPlugin
                 }
             }
         }
-        OfflineDataManager.Tick();
-        AutoGCHandin.Tick();
-        MultiMode.Tick();
-        NotificationHandler.Tick();
-        YesAlready.Tick();
-        Artisan.ArtisanTick();
+
+        try
+        {
+            OfflineDataManager.Tick();
+            AutoGCHandin.Tick();
+            MultiMode.Tick();
+            NotificationHandler.Tick();
+            YesAlready.Tick();
+            Artisan.ArtisanTick();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Error(ex.ToString());
+            throw;
+        }
         //if(C.RetryItemSearch) RetryItemSearch.Tick();
         if (SchedulerMain.PluginEnabled || MultiMode.Enabled || TaskManager.IsBusy)
         {

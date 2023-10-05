@@ -123,11 +123,11 @@ internal unsafe static class MultiModeUI
                 {
                     //ImGui.SameLine();
                     ImGui.SetNextItemWidth(150);
-                    if (ImGui.BeginCombo("##sindex", $"Service Account {data.ServiceAccount + 1}"))
+                    if (ImGui.BeginCombo("##sindex", $"服务器 {data.ServiceAccount + 1}"))
                     {
                         for (var i = 1; i <= 10; i++)
                         {
-                            if (ImGui.Selectable($"Service Account {i}"))
+                            if (ImGui.Selectable($"服务器 {i}"))
                             {
                                 data.ServiceAccount = i - 1;
                             }

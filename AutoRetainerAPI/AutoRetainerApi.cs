@@ -39,12 +39,6 @@ namespace AutoRetainerAPI
         /// </summary>
         public event OnRetainerPostVentureTaskDrawDelegate OnRetainerPostVentureTaskDraw;
 
-        public delegate void OnRetainerListTaskButtonsDrawDelegate();
-        /// <summary>
-        /// Event which is fired every time task buttons are displayed
-        /// </summary>
-        public event OnRetainerListTaskButtonsDrawDelegate OnRetainerListTaskButtonsDraw;
-
         public AutoRetainerApi()
         {
             Svc.PluginInterface.GetIpcSubscriber<string, object>(ApiConsts.OnSendRetainerToVenture).Subscribe(OnSendRetainerToVentureAction);
@@ -52,15 +46,6 @@ namespace AutoRetainerAPI
             Svc.PluginInterface.GetIpcSubscriber<string, string, object>(ApiConsts.OnRetainerReadyForPostprocess).Subscribe(OnRetainerReadyForPostprocessIntl);
             Svc.PluginInterface.GetIpcSubscriber<ulong, string, object>(ApiConsts.OnRetainerSettingsDraw).Subscribe(OnRetainerSettingsDrawAction);
             Svc.PluginInterface.GetIpcSubscriber<ulong, string, object>(ApiConsts.OnRetainerPostVentureTaskDraw).Subscribe(OnRetainerPostVentureTaskDrawAction);
-            Svc.PluginInterface.GetIpcSubscriber<object>(ApiConsts.OnRetainerListTaskButtonsDraw).Subscribe(OnRetainerListTaskButtonsDrawAction);
-        }
-
-        private void OnRetainerListTaskButtonsDrawAction()
-        {
-            if (OnRetainerListTaskButtonsDraw != null)
-            {
-                GenericHelpers.Safe(() => OnRetainerListTaskButtonsDraw());
-            }
         }
 
         private void OnRetainerPostVentureTaskDrawAction(ulong cid, string retainer)
@@ -163,7 +148,6 @@ namespace AutoRetainerAPI
             Svc.PluginInterface.GetIpcSubscriber<string, string, object>(ApiConsts.OnRetainerReadyForPostprocess).Unsubscribe(OnRetainerReadyForPostprocessIntl);
             Svc.PluginInterface.GetIpcSubscriber<ulong, string, object>(ApiConsts.OnRetainerSettingsDraw).Unsubscribe(OnRetainerSettingsDrawAction);
             Svc.PluginInterface.GetIpcSubscriber<ulong, string, object>(ApiConsts.OnRetainerPostVentureTaskDraw).Unsubscribe(OnRetainerPostVentureTaskDrawAction);
-            Svc.PluginInterface.GetIpcSubscriber<object>(ApiConsts.OnRetainerListTaskButtonsDraw).Unsubscribe(OnRetainerListTaskButtonsDrawAction);
         }
 
         /// <summary>

@@ -1,6 +1,5 @@
 using AutoRetainer.Scheduler.Handlers;
 using AutoRetainer.Scheduler.Tasks;
-using AutoRetainerAPI;
 using AutoRetainerAPI.Configuration;
 using Dalamud.Interface.Components;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -124,9 +123,6 @@ internal unsafe class RetainerListOverlay : Window
                 }
             }
             ImGuiEx.Tooltip("Quick Withdraw Gil");
-
-
-            Svc.PluginInterface.GetIpcProvider<object>(ApiConsts.OnRetainerListTaskButtonsDraw).SendMessage();
         }
         height = ImGui.GetWindowSize().Y;
     }
